@@ -23,14 +23,21 @@ import MapGeofence from '../map/MapGeofence';
 import MapPositions from '../map/MapPositions';
 import MapCamera from '../map/MapCamera';
 import scheduleReport from './common/scheduleReport';
+import availableOptions from '../availableOptions.js';
 
-const columnsArray = [
-  ['eventTime', 'positionFixTime'],
-  ['type', 'sharedType'],
-  ['geofenceId', 'sharedGeofence'],
-  ['maintenanceId', 'sharedMaintenance'],
-  ['attributes', 'commandData'],
-];
+let columnsArray = []
+if (availableOptions.EventReportPage?.columnsArray) {
+	columnsArray = availableOptions.EventReportPage?.columnsArray;
+} else {
+	columnsArray = [
+		['eventTime', 'positionFixTime'],
+		['type', 'sharedType'],
+		['geofenceId', 'sharedGeofence'],
+		['maintenanceId', 'sharedMaintenance'],
+		['attributes', 'commandData']
+	];
+}
+
 const columnsMap = new Map(columnsArray);
 
 const EventReportPage = () => {
@@ -44,7 +51,7 @@ const EventReportPage = () => {
   const speedUnit = useAttributePreference('speedUnit');
   const hours12 = usePreference('twelveHourFormat');
 
-  const [allEventTypes, setAllEventTypes] = useState([['allEvents', 'eventAll']]);
+  const [allEventTypes, setAllEventTypes] = useState(availableOptions.EventReportPage?.allEventTypes || [['allEvents', 'eventAll']]);
 
   const [columns, setColumns] = usePersistedState('eventColumns', ['eventTime', 'type', 'attributes']);
   const [eventTypes, setEventTypes] = useState(['allEvents']);
@@ -70,13 +77,17 @@ const EventReportPage = () => {
   }, [selectedItem]);
 
   useEffectAsync(async () => {
-    const response = await fetch('/api/notifications/types');
-    if (response.ok) {
-      const types = await response.json();
-      setAllEventTypes([...allEventTypes, ...types.map((it) => [it.type, prefixString('event', it.type)])]);
-    } else {
-      throw Error(await response.text());
-    }
+	if (availableOptions.EventReportPage?.allEventTypes) {
+		setAllEventTypes(availableOptions.EventReportPage?.allEventTypes);
+	} else {  
+		const response = await fetch('/api/notifications/types');
+		if (response.ok) {		
+			const types = await response.json();
+			setAllEventTypes([['allEvents', 'eventAll'], ...types.map((it) => [it.type, prefixString('event', it.type)])]);
+		} else {
+			throw Error(await response.text());
+		}
+	}
   }, []);
 
   const handleSubmit = useCatch(async ({ deviceId, from, to, type }) => {
